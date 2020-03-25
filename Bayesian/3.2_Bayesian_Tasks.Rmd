@@ -1,0 +1,49 @@
+---
+title: "3.2_Bayesian_Tasks"
+author: "Paul Hazell"
+date: "25/03/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(RColorBrewer)
+library(multcomp)
+```
+
+# 3.2 Bayesian Tasks
+## 3.2.1 Frequentist One-Way Analysis of Variance
+```{r data, include=FALSE}
+df_long <- read.csv('./yield_data.csv',header = FALSE)
+colnames(df_long) <- c("Fertilizer","Yield","plot_size")
+```
+Part (a) Visualise the Field Yeld data
+```{r yield_plot}
+# Part A - Draw me a pretty graph
+# Box-plot
+ggplot(data=df_long, aes(x=Fertilizer, y=Yield))+
+  geom_point(data=df_long,pch=21,alpha=0.5,aes(bg=Fertilizer, size=plot_size))+
+  scale_size_continuous(range = c(10,8))+
+  ggtitle("Crop yield grouped by fertilizer used")+
+  xlab("Fertilizer used")+
+  ylab("Yield (ton/hectare)")+
+  scale_fill_brewer(palette="Spectral")+
+  stat_summary(fun.y = mean,
+               colour="darkblue",
+               geom = "point",
+               shape = 5,
+               size = 3,
+               show.legend = TRUE) +
+  stat_summary(fun.y = mean,
+               colour = "darkblue",
+               geom = "text",
+               show.legend = FALSE,
+               hjust = -0.5,
+               aes(label = round(..y.., digits = 3)))+
+  theme(legend.position = "none",
+        plot.title =element_text(hjust = 0.5))+
+  scale_y_continuous(breaks=seq(0, 9, 1))
+```
