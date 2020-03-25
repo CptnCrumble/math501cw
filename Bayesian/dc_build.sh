@@ -1,0 +1,1 @@
+sudo docker run -d -p 8787:8787 -e PASSWORD=a $1
