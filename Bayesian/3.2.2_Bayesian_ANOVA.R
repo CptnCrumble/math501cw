@@ -77,7 +77,7 @@ print(Bayesian_anova_inference, intervals = c(0.025,0.5,0.975))
 # could use some qbinom??
 
 # PART J - Bayesian multi hypothesis ANOVA
-# Hmmmmm, further reading required
+
 delta_alpha_model <- function(){
   
   # Likelihood function

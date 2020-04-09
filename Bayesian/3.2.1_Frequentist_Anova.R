@@ -6,6 +6,14 @@ library(multcomp)
 #Data setup
 df_long <- read.csv('./yield_data.csv',header = FALSE)
 colnames(df_long) <- c("Fertilizer","Yield","plot_size")
+
+# Attempt to remove dependecy on csv file
+# Cant get the resulting data frame to work - don't know why???
+# Fertilizer <- c("f1","f1","f1","f1","f1","f2","f2","f2","f2","f2","f3","f3","f3","f3","f3","f4","f4","f4","f4","f4")
+# Yield <- c(3,2,4,3,5,5,4,2,6,6,7,6,4,6,4,7,5,5,6,9)
+# plot_size <- c(1.1,1.1,1.1,2.2,1.1,1.1,1.1,1.1,1.1,2.2,1.1,1.1,1.1,2.2,2.2,1.1,1.1,2.2,1.1,1.1)
+# df_long <- data.frame(cbind(Fertilizer,Yield,plot_size))
+
 df_long$pch <- factor(df_long$plot_size)
 
 # Part A - Draw me a pretty graph
@@ -16,9 +24,23 @@ ggplot(data=df_long, aes(x=Fertilizer, y=Yield))+
   ggtitle("Crop yield grouped by fertilizer used")+
   xlab("Fertilizer used")+
   ylab("Yield (ton/hectare)")+
+  scale_fill_brewer(palette="Spectral")+
+  stat_summary(fun.y = mean,
+               colour="darkblue",
+               geom = "point",
+               shape = 5,
+               size = 3,
+               show.legend = TRUE) +
+  stat_summary(fun.y = mean,
+               colour = "darkblue",
+               geom = "text",
+               show.legend = FALSE,
+               hjust = -0.5,
+               aes(label = round(..y.., digits = 3)))+
   theme(legend.position = "none",
         plot.title =element_text(hjust = 0.5))+
-  scale_fill_brewer(palette="Spectral")
+  scale_y_continuous(breaks=seq(0, 9, 1))+
+  coord_flip()
 # + in Mean values
 # + more values on the y axis
 
