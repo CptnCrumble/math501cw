@@ -21,11 +21,13 @@ data_anova <- list("y", "group", "n", "I")
 #BUGS code
 Bayesian_anova <- function(){
   
+  # Likelihood function
   for(k in 1:n){
     y[k] ~ dnorm(mu[k], tau) 
     mu[k] <- m + alpha[group[k]] 
   }
   
+  # Priors
   m ~ dnorm(0.0, 0.0001)
   alpha[1] <- 0 
   
@@ -36,6 +38,7 @@ Bayesian_anova <- function(){
   tau ~ dgamma(0.001,0.001)
   sigma <- 1.0 / sqrt(tau)
   
+  # Track Means
   mean_yield[1] = m + alpha[1]
   mean_yield[2] = m + alpha[2]
   mean_yield[3] = m + alpha[3]
@@ -43,7 +46,7 @@ Bayesian_anova <- function(){
 }
 # Run JAGS
 Bayesian_anova_inference <- jags(data = data_anova, 
-                                 parameters.to.save = c("m", # m is mu above
+                                 parameters.to.save = c("m", 
                                                         "alpha", 
                                                         "sigma", 
                                                         "tau",
@@ -73,17 +76,54 @@ ggs_caterpillar(ggs_data,family = "^alpha")
 print(Bayesian_anova_inference, intervals = c(0.025,0.5,0.975))
 # could use some qbinom??
 
-# PART J 
+# PART J - Bayesian multi hypothesis ANOVA
 # Hmmmmm, further reading required
+delta_alpha_model <- function(){
+  
+  # Likelihood function
+  for(k in 1:n){
+    y[k] ~ dnorm(mu[k], tau) 
+    mu[k] <- m + alpha[group[k]] 
+  }
+  
+  # Priors
+  m ~ dnorm(0.0, 0.0001)
+  
+  for(i in 1:I){ 
+    alpha[i] ~ dnorm(0.0,0.0001)
+    for (n in 1:(i-1)) {
+      AlphaDelta[n,i] <- alpha[n]-alpha[i]
+    }
+  }
+  
+  # Variance
+  tau ~ dgamma(0.001,0.001)
+  sigma <- 1.0 / sqrt(tau)
+  
+}
+
+delta_alpha_inference <- jags(data = data_anova, 
+                              parameters.to.save = c("m", 
+                                                     "alpha", 
+                                                     "sigma", 
+                                                     "tau",
+                                                     "AlphaDelta"), 
+                              n.iter = 1000000, 
+                              n.chains = 3,
+                              model.file = delta_alpha_model)
+
+print(delta_alpha_inference, intervals = c(0.025,0.5,0.975))
 
 # Part K - the simpler model
 simple_bayes_model <- function(){
   
+  # Likelihood function
   for(k in 1:n){
     y[k] ~ dnorm(mu[k], tau)
     mu[k] <- fertilizer[group[k]]
   }
   
+  # Priors
   for(i in 1:I){ 
     fertilizer[i] ~ dnorm(0.0,0.0001)
   }
