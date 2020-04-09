@@ -7,13 +7,16 @@ library(multcomp)
 df_long <- read.csv('./yield_data.csv',header = FALSE)
 colnames(df_long) <- c("Fertilizer","Yield","plot_size")
 
-# Attempt to remove dependecy on csv file
+# -------------------- Attempt to remove dependecy on csv file ----------------------------------------------------------------
 # Cant get the resulting data frame to work - don't know why???
 # Fertilizer <- c("f1","f1","f1","f1","f1","f2","f2","f2","f2","f2","f3","f3","f3","f3","f3","f4","f4","f4","f4","f4")
 # Yield <- c(3,2,4,3,5,5,4,2,6,6,7,6,4,6,4,7,5,5,6,9)
 # plot_size <- c(1.1,1.1,1.1,2.2,1.1,1.1,1.1,1.1,1.1,2.2,1.1,1.1,1.1,2.2,2.2,1.1,1.1,2.2,1.1,1.1)
 # df_long <- data.frame(cbind(Fertilizer,Yield,plot_size))
 
+# csv hosted online, access via:
+#df_long <- read.csv('https://gist.githubusercontent.com/CptnCrumble/d4642a73f553e96da659bf4edf8243da/raw/8bea16ca3e2a22e87c5e7cab185adcb5dcd38ac9/math501data.csv',header = FALSE)
+#------------------------------------------------------------------------------------------------------------------------------
 df_long$pch <- factor(df_long$plot_size)
 
 # Part A - Draw me a pretty graph
@@ -41,8 +44,10 @@ ggplot(data=df_long, aes(x=Fertilizer, y=Yield))+
         plot.title =element_text(hjust = 0.5))+
   scale_y_continuous(breaks=seq(0, 9, 1))+
   coord_flip()
-# + in Mean values
-# + more values on the y axis
+# + in horizontal lines to illustrate spread of fertilizer groups
+# + change background colour - something lighter/blank
+# + better font types
+# + sub heading
 
 # Part B - Explain what alpha is:
 # alphj is the difference between the mean yield of the fields exposed to fertilizer 1 and the mean yield of the fields exposed to fertilizer j.
@@ -78,4 +83,4 @@ yield_lm_mp <- lm(Yield ~ Fertilizer -1, data = df_long)
 # Generalised Linear Hypothesis test for mu4 0.5 greater than other means
 ght <- glht(yield_lm_mp,linfct="Fertilizerf4 - ((Fertilizerf1 + Fertilizerf2 + Fertilizerf3)/3) <= 0.5")
 summary(ght)
-
+print(ght)

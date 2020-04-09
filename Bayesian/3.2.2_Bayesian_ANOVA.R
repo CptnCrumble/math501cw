@@ -59,8 +59,6 @@ Bayesian_anova_inference <- jags(data = data_anova,
 
 mcmc_data <- as.mcmc(Bayesian_anova_inference)
 ggs_data <- ggs(mcmc_data)
-
-
 ggs_density(ggs_data, family = "^alpha")+xlim(-10,10)
 # + better titles all round
 # Need discussion points
@@ -100,14 +98,12 @@ delta_alpha_model <- function(){
   tau ~ dgamma(0.001,0.001)
   sigma <- 1.0 / sqrt(tau)
   
+  # Calculate for units...
+  Alpha_four_test <- alpha[4] - ((alpha[1] + alpha[2] + alpha[3])/3)
 }
 
 delta_alpha_inference <- jags(data = data_anova, 
-                              parameters.to.save = c("m", 
-                                                     "alpha", 
-                                                     "sigma", 
-                                                     "tau",
-                                                     "AlphaDelta"), 
+                              parameters.to.save = c("AlphaDelta","Alpha_four_test"), 
                               n.iter = 1000000, 
                               n.chains = 3,
                               model.file = delta_alpha_model)
@@ -130,7 +126,6 @@ simple_bayes_model <- function(){
   
   tau ~ dgamma(0.001,0.001)
   sigma <- 1.0 / sqrt(tau)
-  
 }
 
 # Simple JAGS
