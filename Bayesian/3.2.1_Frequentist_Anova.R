@@ -43,10 +43,25 @@ ggplot(data=df_long, aes(x=Fertilizer, y=Yield))+
   theme(legend.position = "none",
         plot.title =element_text(hjust = 0.5))+
   scale_y_continuous(breaks=seq(0, 9, 1))+
+  geom_segment(aes(x=))
   coord_flip()
-# + in horizontal lines to illustrate spread of fertilizer groups
+# + in horizontal lines to illustrate spread of fertilizer groups --------------------------------------------------------------------------------
+  #wont build in correct order, looks shit
+  #heres the code anyway:
+  
+  # f1 <- dplyr::filter(df_long,Fertilizer=="f1")
+  # f2 <- dplyr::filter(df_long,Fertilizer=="f2")
+  # f3 <- dplyr::filter(df_long,Fertilizer=="f3")
+  # f4 <- dplyr::filter(df_long,Fertilizer=="f4")
+  
+  # 
+  # geom_segment(aes(y=min(f1$Yield), x=1, yend=max(f1$Yield), xend=1), color='#ef7778', size=0.35)+
+  #   geom_segment(aes(y=min(f2$Yield), x=2, yend=max(f2$Yield), xend=2), color='#fdb874', size=0.35)+
+  #   geom_segment(aes(y=min(f3$Yield), x=3, yend=max(f3$Yield), xend=3), color='#5cbd4e', size=0.35)+
+  #   geom_segment(aes(y=min(f4$Yield), x=4, yend=max(f4$Yield), xend=4), color='#2b83ba', size=0.35)+
+  
+  #---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # + change background colour - something lighter/blank
-# + better font types
 # + sub heading
 
 # Part B - Explain what alpha is:

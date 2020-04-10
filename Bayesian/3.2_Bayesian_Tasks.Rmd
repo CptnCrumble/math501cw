@@ -2,7 +2,9 @@
 title: "3.2_Bayesian_Tasks"
 author: "Paul Hazell"
 date: "25/03/2020"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -24,36 +26,25 @@ colnames(df_long) <- c("Fertilizer","Yield","plot_size")
 ```
 __*Part (a) Visualise the data*__
 
-  Ordinarily a box-plot would offer a good visualisation of THIS KIND OF DATA however this small data set generates an incoherent box-plot hence the authors have created the following graph instead:
-```{r yield_plot, echo=FALSE}
-# Part A - Draw me a pretty graph
-# Box-plot
+  In the plot below crop yields are grouped by the fertilizer used upon the field and repeated yield values are shown as stacked circles. The mean yield for each fertilizer group is shown in blue. 
+```{r yield_plot}
 ggplot(data=df_long, aes(x=Fertilizer, y=Yield))+
-  geom_point(data=df_long,pch=21,alpha=0.5,aes(bg=Fertilizer, size=plot_size))+
+  geom_point(data=df_long,pch=21,alpha=0.75,aes(bg=Fertilizer, size=plot_size))+
   scale_size_continuous(range = c(10,8))+
-  ggtitle("Crop yield grouped by fertilizer used")+
+  ggtitle("Crop yield grouped by fertilizer used upon the field")+
   xlab("Fertilizer used")+
   ylab("Crop Yield (ton/hectare)")+
   scale_fill_brewer(palette="Spectral")+
-  stat_summary(fun.y = mean,
-               colour="darkblue",
-               geom = "point",
-               shape = 5,
-               size = 2.5,
-               show.legend = TRUE) +
-  stat_summary(fun.y = mean,
-               colour = "darkblue",
-               geom = "text",
-               show.legend = FALSE,
-               vjust = -0.75,
-               aes(label = round(..y.., digits = 3)))+
-  theme(legend.position = "none",
-        plot.title =element_text(hjust = 0.5))+
+  stat_summary(fun.y = mean, colour="darkblue", geom = "point", shape = 18, size = 2.5, 
+               show.legend = TRUE) + 
+  stat_summary(fun.y = mean, colour = "darkblue", geom = "text", show.legend = FALSE, 
+               vjust = -0.75, aes(label = round(..y.., digits = 3)))+
+  theme(legend.position = "none", plot.title =element_text(hjust = 0.5))+
   scale_y_continuous(breaks=seq(0, 9, 1))+
   coord_flip()
 ```
-
-  In the above plot repeated yield values appear as stacked circles and the mean value for each fertilizer group is given in blue. Our visualisation suggests notable overlap between adjacent fertilizer groups however *f1* could be significantly different to groups *f3* and *f4*.
+  Our visualisation suggests notable overlap between adjacent fertilizer groups and that *f1* could prove to be significantly different to groups *f3* and *f4*.
+  
 
 __*Part (b) Interpretation of the parameter $\alpha$*__
 
@@ -65,62 +56,70 @@ __*Part (b) Interpretation of the parameter $\alpha$*__
   
 __*Part (c) Frequentist ANOVA*__
 
-  To undertake frequentist  ANOVA on our dataset first we utilize the Maximum Likelihood EstimatOR to generate a linear model for crop yield dependant upon fertilizer group.
+  To undertake frequentist ANOVA on our dataset first we generate a linear model for crop yield dependant upon fertilizer group.
 ```{r lm}
 yield_lm <- lm(Yield ~ Fertilizer,data = df_long)
 ```
-  From this model we can derive the mean crop yield value for **f1** and the $\alpha$ values for the other groups.
-```{r alphas, echo=FALSE}
+  From this model we can derive the mean crop yield value for *f1* and the $\alpha$ values for the other groups.
+```{r alphas}
 alphas <- yield_lm$coefficients
+# rename data for a cleaner results table
 names(alphas) <- c("f1_mean","f2_alpha","f3_alpha","f4_alpha")
 alphas
 ```
-  The results of an ANOVA test on our linear model returns the following results:
-```{r anova, echo=FALSE}
+  An ANOVA test on our linear model returns the following results:
+```{r anova}
 anova(yield_lm)
 ```
-  If we take a SIZE of 0.05 to be our threshold then our P value of 0.03388 means we can reject our null hypothesis. MORE HERE.
+  Given that the size of this ANOVA test is 0.05 our p-value of 0.03388 means we can reject our null hypothesis and conclude that some of the observed difference in crop yield could be correlated to the fertilizer being used.
   
 __*Part (d) Tukey Honest Significant Differences Test*__
 
-  BLURB - STATE ALL THE HYPOTHESIS
-```{r Tukey, include=FALSE}
+  We will now compare inter-field crop yields using a Tukey Honest Significant Difference test. The null hypotheses for this test are:
+  
+  - $H_0$ : $\alpha_{f2}$ - $\alpha_{f1}$ = 0
+  - $H_0$ : $\alpha_{f3}$ - $\alpha_{f1}$ = 0
+  - $H_0$ : $\alpha_{f4}$ - $\alpha_{f1}$ = 0
+  - $H_0$ : $\alpha_{f3}$ - $\alpha_{f2}$ = 0
+  - $H_0$ : $\alpha_{f4}$ - $\alpha_{f2}$ = 0
+  - $H_0$ : $\alpha_{f4}$ - $\alpha_{f3}$ = 0
+
+  The code and results of our Tukey test are as follows:
+```{r Tukey_result}
 yield_aov <- aov(Yield ~ Fertilizer,data = df_long)
-tukey_results <- TukeyHSD(yield_aov)
-tukey_analysis <- tukey_results$Fertilizer[,"p adj"]
-```
-  The results of our Tukey test are as follows:
-```{r Tukey_result, echo=FALSE}
-tukey_analysis
+TukeyHSD(yield_aov)
 ```
 
-  Here we see the p-values when directly comparing each of the fertilizer groups in turn. If we filter our results for value that satisfy our TEST OF 0.05 we can see that the only significant difference is between groups *f1* and *f4*
-```{r Tukey_filtered, echo=FALSE}
-tukey_analysis[which(tukey_analysis < 0.05)]
-```
+  Whilst all groups have a non zero difference in mean yields only the difference between *f4* and *f1* passes our significance value of 0.05 so the only null hypothesis that we can reject is:
+  
+  $H_0$ : $\alpha_{f4}$ - $\alpha_{f1}$ = 0
+  
+  Mean yield for *f4* is 3 ton/hectare greater than *f1*, the results of our Tukey test show that this observation is highly unlikely to be a chance occurence.
 
-__*Part (e) Is the underlying crop yield level $\mu_4$ obtained using the fourth fertilizer more than 0.5 units greater than the average of the underlying crop yield levels obtained using the other three fertilizers, $\mu_1$ , $\mu_2$ and $\mu_3$ respectively? *__
+__*Part (e) Is the underlying crop yield level for _f4_ more than 0.5 units greater than the average of the underlying crop yield levels obtained using the other three fertilizers? *__
 
   In order to answer this question we will look to reject the following null hypothesis:
   
   $H_0$ : $\mu_4$ - $\left(\mu_1 + \mu_2 + \mu_3 / 3 \right) \le 0.5$
 
-  To test $H_0$ we will run a mean paramterised version of our linear model run through a generalised linear hypothesis test along with a description of our null hypothesis.
+  To test $H_0$ we will run a mean parameterised version of our linear model run through a generalised linear hypothesis test along with a description of our null hypothesis, the results of which can be seen below.
 ```{r glht}
 yield_lm_mp <- lm(Yield ~ Fertilizer -1, data = df_long)
-ght <- glht(yield_lm_mp,linfct="Fertilizerf4 - ((Fertilizerf1 + Fertilizerf2 + Fertilizerf3)/3) <= 0.5")
+# rename data for a cleaner results table
+names(yield_lm_mp$coefficients) <- c("f1","f2","f3","f4")
+ght <- glht(yield_lm_mp,linfct="f4 - ((f1 + f2 + f3)/3) <= 0.5")
 summary(ght)
 ```
-  Here we can see a p-value of 0.0391 which allows us to reject our null hypothesis and conclude that the underlying crop yield for μ 4 is more than 0.5 units greater than the average underlying crop yield of the other three groups.
+  Here we can see a p-value of 0.0391 which allows us to reject our null hypothesis and conclude that the underlying crop yield for *f4* is more than 0.5 units greater than the average underlying crop yield of the other three groups.
   
   
-## 3.2.2 Bayesian One-way Analysis of Variance
+## 3.2.2 Bayesian One-way ANOVA
 
 __*Part (f) Once way ANOVA using JAGS*__
 
   The JAGS code we will use to undertake our ANOVA is as follows:
-```{r JAGS_data_set_up,include=FALSE}
-# Yield values
+```{r JAGS_ANOVA, results='hide'}
+# yield values
 y <- df_long$Yield
 # fertilizer groups - convert group to numeric factor
 g1 <- df_long$Fertilizer
@@ -129,52 +128,42 @@ group <-as.factor(as.numeric(g2))
 # number of data points
 n <- length(y)
 # number of groups 
-I <- 4
-data_anova <- list("y", "group", "n", "I")
-```
-```{r JAGS_ANOVA}
+g <- 4
+data_anova <- list("y", "group", "n", "g")
+
+# JAGS model
 Bayesian_anova <- function(){
-  
   # Likelihood function
   for(k in 1:n){
     y[k] ~ dnorm(mu[k], tau) 
     mu[k] <- m + alpha[group[k]] 
   }
   
-  # Priors - Uninformative with uniform variance
+  # Priors - objective with uniform variance
   m ~ dnorm(0.0, 0.0001)
   alpha[1] <- 0 
-  
-  for(i in 2:I){ 
+  for(i in 2:g){ 
     alpha[i] ~ dnorm(0.0,0.0001)
   }
-  
   tau ~ dgamma(0.001,0.001)
   sigma <- 1.0 / sqrt(tau)
   
-  # Tracking the means yield values
+  # Tracking the mean yield values
   mean_yield[1] = m + alpha[1]
   mean_yield[2] = m + alpha[2]
   mean_yield[3] = m + alpha[3]
   mean_yield[4] = m + alpha[4]
 }
-```
-```{r run_JAGS,include=FALSE}
+
 Bayesian_anova_inference <- jags(data = data_anova, 
-                                 parameters.to.save = c("m", 
-                                                        "alpha", 
-                                                        "sigma", 
-                                                        "tau",
-                                                        "mean_yield"), 
-                                 n.iter = 100000, 
-                                 n.chains = 3,
-                                 model.file = Bayesian_anova)
+                                 parameters.to.save = c("alpha","mean_yield"), 
+                                 n.iter = 100000, n.chains = 3, model.file = Bayesian_anova)
 ```
 
 __*Part (g) Graphical representation of posterior densities*__
   BLURB
   
-```{r posterior_plot, echo=FALSE}
+```{r posterior_plot}
 mcmc_data <- as.mcmc(Bayesian_anova_inference)
 ggs_data <- ggs(mcmc_data)
 ggs_density(ggs_data, family = "^alpha")+xlim(-10,10)
@@ -185,11 +174,11 @@ __*Part (h) 95% Credible Interval Analysis*__
 
   BLURB - mui first
   
-```{r cred_int_mu, echo=FALSE}
+```{r cred_int_mu}
 ggs_caterpillar(ggs_data,family = "^mean_yield")
 ```
   BLURB - alpha to re-inforce
-```{r cred_int_alpha, echo=FALSE}
+```{r cred_int_alpha}
 ggs_caterpillar(ggs_data,family = "^alpha")
 ```
 
@@ -199,8 +188,8 @@ __*Part (i) Compare Frequentist and Bayesian 95% confidence intervals*__
   
 __*Part (j) Bayesian analysis of differences in $\alpha_f$*__
 
-  We will use the following JAGS code to infer the posterior distributions for each of the hypotheses laid out in section (c) AND THE UNITS question:
-```{r JAGS_alpha_delta}
+  We will use the following JAGS code to infer the posterior distributions for each of the hypotheses laid out in section (c) and (d):
+```{r JAGS_alpha_delta, results='hide'}
 delta_alpha_model <- function(){
   
   # Likelihood function
@@ -209,33 +198,28 @@ delta_alpha_model <- function(){
     mu[k] <- m + alpha[group[k]] 
   }
   
-  # Priors - Uniformative with uniform variance
+  # Priors - objective with uniform variance
   m ~ dnorm(0.0, 0.0001)
+  tau ~ dgamma(0.001,0.001)
+  sigma <- 1.0 / sqrt(tau)
   
-  for(i in 1:I){ 
+  # alpha 
+  for(i in 1:g){ 
     alpha[i] ~ dnorm(0.0,0.0001)
     for (n in 1:(i-1)) {
       AlphaDelta[n,i] <- alpha[n]-alpha[i]
     }
   }
   
-  tau ~ dgamma(0.001,0.001)
-  sigma <- 1.0 / sqrt(tau)
-  
-  # Track value for Hypothesis test
+  # Track value for part (d) Hypothesis
   Alpha_four_test <- alpha[4] - ((alpha[1] + alpha[2] + alpha[3])/3)
 }
-```
 
-  The output obtained is as follows:
-```{r run_alpha_delta, include=FALSE}
 delta_alpha_inference <- jags(data = data_anova, 
                               parameters.to.save = c("AlphaDelta","Alpha_four_test"), 
-                              n.iter = 1000000, 
-                              n.chains = 3,
-                              model.file = delta_alpha_model)
+                              n.iter = 1000000, n.chains = 3, model.file = delta_alpha_model)
 ```
-```{r print_alpha, echo=FALSE}
+```{r print_results}
 print(delta_alpha_inference, intervals = c(0.025,0.5,0.975))
 ```
   BLURB - Some analysis, compare with point (d), use caterpillar plot 
@@ -244,8 +228,8 @@ print(delta_alpha_inference, intervals = c(0.025,0.5,0.975))
 
 __*Part (k) JAGS code for simple Bayesian model*__
 
-  The JAGS code we will use to infer posterior distributions based upon the given model is as follows:
-```{r simple_jags}
+  The JAGS code we will use to infer posterior distributions based upon the given simple model is as follows:
+```{r simple_jags, results='hide'}
 simple_bayes_model <- function(){
   
   # Likelihood function
@@ -254,31 +238,26 @@ simple_bayes_model <- function(){
     mu[k] <- fertilizer[group[k]]
   }
   
-  # Priors
-  for(i in 1:I){ 
+  # Priors - objective with uniform variance
+  for(i in 1:g){ 
     fertilizer[i] ~ dnorm(0.0,0.0001)
   }
   
   tau ~ dgamma(0.001,0.001)
   sigma <- 1.0 / sqrt(tau)
 }
-```
-```{r run_simple_JAGS, include=FALSE}
+
 simple_jags <- jags(data = data_anova, 
-                    parameters.to.save = c("fertilizer", 
-                                           "sigma", 
-                                           "tau"), 
-                    n.iter = 100000, 
-                    n.chains = 3,
-                    model.file = simple_bayes_model)
+                    parameters.to.save = c("fertilizer", "sigma", "tau"), 
+                    n.iter = 100000, n.chains = 3, model.file = simple_bayes_model)
 ```
 
   more BLURB ?
   
-__*Part (l) Graphical representations of the simle model*__
+__*Part (l) Graphical representations of the simple model*__
 
   BLURB
-```{r plot_simp_post,echo=FALSE}
+```{r plot_simp_post}
 ggs_simple <- ggs(as.mcmc(simple_jags))
 ggs_caterpillar(ggs_simple,family = "^fertilizer")
 ```
