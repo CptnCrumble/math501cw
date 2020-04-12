@@ -96,6 +96,6 @@ tukey_analysis[which(tukey_analysis < 0.05)]
 # Mean Parameterised Linear Model
 yield_lm_mp <- lm(Yield ~ Fertilizer -1, data = df_long)
 # Generalised Linear Hypothesis test for mu4 0.5 greater than other means
-ght <- glht(yield_lm_mp,linfct="Fertilizerf4 - ((Fertilizerf1 + Fertilizerf2 + Fertilizerf3)/3) <= 0.5")
+ght <- glht(yield_lm_mp,linfct="Fertilizerf4 - ((Fertilizerf1 + Fertilizerf2 + Fertilizerf3)/3) <=0.5")
 summary(ght)
 print(ght)

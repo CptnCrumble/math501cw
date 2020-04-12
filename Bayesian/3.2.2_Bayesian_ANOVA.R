@@ -104,8 +104,8 @@ delta_alpha_model <- function(){
 
 delta_alpha_inference <- jags(data = data_anova, 
                               parameters.to.save = c("AlphaDelta","Alpha_four_test"), 
-                              n.iter = 1000000, 
-                              n.chains = 3,
+                              n.iter = 2000000, 
+                              n.chains = 1,
                               model.file = delta_alpha_model)
 
 print(delta_alpha_inference, intervals = c(0.025,0.5,0.975))
