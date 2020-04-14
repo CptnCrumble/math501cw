@@ -26,7 +26,7 @@ colnames(df_long) <- c("Fertilizer","Yield","plot_size")
 ```
 __*Part (a) Visualise the data*__
 
-  In the plot below crop yields are grouped by the fertilizer used upon the field and repeated yield values are shown as stacked circles. The mean yield for each fertilizer group is shown in blue. 
+  In the plot below crop yields are grouped by the fertilizer used upon the field and repeated yield values are shown as stacked circles. The mean yield for each fertilizer group is marked by a blue diamond. 
 ```{r yield_plot}
 ggplot(data=df_long, aes(x=Fertilizer, y=Yield))+
   geom_point(data=df_long,pch=21,alpha=0.75,aes(bg=Fertilizer, size=plot_size))+
@@ -41,11 +41,14 @@ ggplot(data=df_long, aes(x=Fertilizer, y=Yield))+
   stat_summary(fun.y = mean, colour = "darkblue", geom = "text", show.legend = FALSE, 
                vjust = -0.75, aes(label = round(..y.., digits = 3)))+
   theme(legend.position = "none", plot.title =element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
         axis.text.y = element_text(size = 13))+
   scale_y_continuous(breaks=seq(0, 9, 1))+
   coord_flip()
 ```
   Our visualisation shows a trend of rising means across the fertilizer groups supporting the idea that a fields crop yield is influenced by the fertilizer used. However our data set is small, variance is considerable and we can see large overlaps in the ranges of yields for each of the groups. 
+
+---
 
 __*Part (b) Interpretation of the parameter $\alpha$*__
 
@@ -54,7 +57,12 @@ __*Part (b) Interpretation of the parameter $\alpha$*__
   If $\alpha$ = 0 for all of our groups then our data provides no evidence that these fertilisers have different effects on crop yield.
   A null hypothesis of there being no difference in crop yield between the fertilizer groups can be articulated as:
   
-  $H_0$ : $\alpha_{f2}$ = $\alpha_{f3}$ = $\alpha_{f4}$ = 0
+\begin{center}
+  $H_{0(b)}$ : $\alpha_{f2}$ = $\alpha_{f3}$ = $\alpha_{f4}$ = 0
+\end{center}
+  
+
+---
   
 __*Part (c) Frequentist ANOVA*__
 
@@ -72,19 +80,21 @@ summary(yield_lm)
 ```{r anova}
 anova(yield_lm)
 ```
-  Given that the size of this ANOVA test is 0.05 our p-value of 0.03388 means we can reject our null hypothesis and conclude that crop yield is different when different fertilizers are used.
+  Given that the size of this ANOVA test is 0.05 our p-value of 0.03388 means we can reject $H_{0(b)}$ and conclude that crop yield is different when different fertilizers are used.
+  
+---
   
 __*Part (d) Tukey Honest Significant Differences Test*__
 
   We will now investigate inter-field crop yield differences using a Tukey Honest Significant Difference test. The null hypotheses for this test are:
-  
-  - $H_0$ : $\alpha_{f2}$ - $\alpha_{f1}$ = 0
-  - $H_0$ : $\alpha_{f3}$ - $\alpha_{f1}$ = 0
-  - $H_0$ : $\alpha_{f4}$ - $\alpha_{f1}$ = 0
-  - $H_0$ : $\alpha_{f3}$ - $\alpha_{f2}$ = 0
-  - $H_0$ : $\alpha_{f4}$ - $\alpha_{f2}$ = 0
-  - $H_0$ : $\alpha_{f4}$ - $\alpha_{f3}$ = 0
-
+\begin{center}
+   - $H_{0(d2:1)}$ : $\alpha_{f2}$ - $\alpha_{f1}$ = 0
+   - $H_{0(d3:1)}$ : $\alpha_{f3}$ - $\alpha_{f1}$ = 0
+   - $H_{0(d4:1)}$ : $\alpha_{f4}$ - $\alpha_{f1}$ = 0
+   - $H_{0(d3:2)}$ : $\alpha_{f3}$ - $\alpha_{f2}$ = 0
+   - $H_{0(d4:2)}$ : $\alpha_{f4}$ - $\alpha_{f2}$ = 0
+   - $H_{0(d4:3)}$ : $\alpha_{f4}$ - $\alpha_{f3}$ = 0
+\end{center}
   The code and results of our Tukey test are as follows:
 ```{r Tukey_result}
 yield_aov <- aov(Yield ~ Fertilizer,data = df_long)
@@ -92,18 +102,21 @@ TukeyHSD(yield_aov)
 ```
 
   Whilst all groups have a non zero difference in mean yields only the difference between *f4* and *f1* passes our significance value of 0.05 hence the only null hypothesis that we can reject is:
-  
-  $H_0$ : $\alpha_{f4}$ - $\alpha_{f1}$ = 0
-  
+\begin{center}
+  $H_{0(d4:1)}$ : $\alpha_{f4}$ - $\alpha_{f1}$ = 0
+\end{center}
   Mean yield for *f4* is 3 ton/hectare greater than *f1*, the results of our Tukey test show that this observation is highly unlikely to be a chance occurence.
+
+---
 
 __*Part (e) Is the underlying crop yield level for _f4_ more than 0.5 units greater than the average of the underlying crop yield levels obtained using the other three fertilizers? *__
 
   In order to answer this question we will look to reject the following null hypothesis:
-  
-  $H_0$ : $\mu_4$ - $\left(\mu_1 + \mu_2 + \mu_3 / 3 \right) \le 0.5$
+\begin{center}
+  $H_{0(e)}$ : $\mu_4$ - $\left(\mu_1 + \mu_2 + \mu_3 / 3 \right) \le 0.5$
+\end{center}
 
-  To test $H_0$ we will run a mean parameterised version of our linear model through a generalised linear hypothesis test along with a description of our null hypothesis, the results of which can be seen below.
+  To test $H_{0(e)}$ we will run a mean parameterised version of our linear model through a generalised linear hypothesis test along with a description of our null hypothesis, the results of which can be seen below.
 ```{r glht}
 yield_lm_mp <- lm(Yield ~ Fertilizer -1, data = df_long)
 # rename data for a cleaner results table
@@ -112,9 +125,13 @@ ght <- glht(yield_lm_mp,linfct="f4 - ((f1 + f2 + f3)/3) <= 0.5")
 summary(ght)
 ```
   
-  The above results state that if we pressume $H_0$ to be true then the probability of $\mu_4$ - $\left(\mu_1 + \mu_2 + \mu_3 / 3 \right) \ge$ 1.882 is 0.0391. Taking the complement of this probability we can state that if we pressume $H_0$ to be false then the probability $\mu_4$ - $\left(\mu_1 + \mu_2 + \mu_3 / 3 \right) \le$ 1.882 is 0.9609. 
+  The above results state that if we pressume $H_{0(e)}$ to be true then the probability of $\mu_4$ - $\left(\mu_1 + \mu_2 + \mu_3 / 3 \right) \ge$ 1.882 is 0.0391. 
+  
+  Taking the complement of this probability we can state that if we pressume $H_{0(e)}$ to be false then the probability $\mu_4$ - $\left(\mu_1 + \mu_2 + \mu_3 / 3 \right) \le$ 1.882 is 0.9609. 
   
   Since 1.882 > 0.5 we can reasonably conclude that the $\mu_4$ is more than 0.5 units greater than the average of the other underlying yields. 
+  
+---
   
 ## 3.2.2 Bayesian One-way ANOVA
 
@@ -164,8 +181,11 @@ Bayesian_anova_inference <- jags(data = data_anova,
                                  model.file = Bayesian_anova)
 ```
 ```{r print}
-print(Bayesian_anova_inference, intervals = c(0.025,0.5,0.975))
+anova_data <- Bayesian_anova_inference[[2]]$summary[c(-1,-5,-6),c(1,2,3,5,7)]
+print(anova_data)
 ```
+
+---
 
 __*Part (g) Graphical representation of posterior densities*__
   
@@ -174,50 +194,59 @@ mcmc_data <- as.mcmc(Bayesian_anova_inference)
 ggs_data <- ggs(mcmc_data)
 ggs_density(ggs_data, family = "^alpha")+xlim(-10,10)+
   theme(plot.title =element_text(hjust = 0.5))+
-  ggtitle("Alpha value posterior densities")+
+  ggtitle("Posterior Distributions of Alpha Values")+
   xlab("Crop Yield (ton/hectare)")+
   ylab("Probability Desinty")
 ```
 
-  The first thing to note from the above plot is that the posterior distributions of the three chains are closely alligned, this shows our JAGS code was able to consistently sample and gives us confidence in our results. $\alpha_1$ is of course zero and by scanning the areas of highest probability density across each of the distributions we can see a similar pattern to the rising means observed in section (a). 
+  The first thing to note from the above plot is that the posterior distributions of the three chains are closely alligned, this shows our JAGS code was able to consistently sample and gives us confidence in our results. $\alpha_1$ is of course centered around zero and by scanning the peaks of probability density across each of the distributions we can see a similar pattern to the rising means observed in section (a). 
   
-  By observing the proportion of each distributions that is < 0 we can also gain an idea of whether or not we can reject our null hypothesis from section (b). For example its quite clear $\alpha_2$ does not allow us to reject the null hypothesis but there is a good chance $\alpha_4$ and perhaps even $\alpha_3$ will allow us to do so.
+  By observing the proportion of each distributions that is < 0 we can also gain an idea of whether or not we can reject $H_{0(b)}$. For example its quite clear $\alpha_2$ does not allow us to reject $H_{0(b)}$ but there is a good chance $\alpha_4$ and perhaps even $\alpha_3$ will allow us to do so.
 
+---
 
 __*Part (h) 95% Credible Interval Analysis*__
 
    
 ```{r cred_int_mu}
 ggs_caterpillar(ggs_data,family = "^alpha")+
-  theme(plot.title =element_text(hjust = 0.5))+
-  ggtitle("Caterpillar plot of credible intervals for alpha value posterior densities")+
   ylab("")+
-  xlab("Difference in Crop yield with group f1 (ton/hectare)")
+  xlab("Difference in Crop yield with group f1 (ton/hectare)")+
+  labs(title = "Caterpillar Plot of Posterior Densities for Alpha Values",
+       subtitle = "90% and 95% credible intervals shown")+
+  theme(plot.title =element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
 ```
 
-  Above we see a caterpillar plot for the 95% and 90% credible intervals of the distributions shown in section (g). Here we can see that the 95% credible intervals for $\alpha_4$ and $\alpha_3$ only contain values > 0 thereby allowing us to reject the null hypothesis from section (b).
+  Above we see a caterpillar plot for the 95% and 90% credible intervals of the distributions shown in section (g). Here we can see that the 95% credible intervals for $\alpha_4$ and $\alpha_3$ only contain values > 0 thereby allowing us to reject $H_{0(b)}$.
   
   For a wider view of the data we present a caterpillar plot of credible intervals for mean yields.
   
 ```{r alpha_cat, echo=FALSE}
 ggs_caterpillar(ggs_data,family = "^mean_yield")+
-  theme(plot.title =element_text(hjust = 0.5))+
-  ggtitle("Caterpillar plot of credible intervals for mean yield posterior densities")+
   ylab("")+
-  xlab("Crop yield (ton/hectare)")
+  xlab("Crop yield (ton/hectare)")+
+  labs(title = "Caterpillar Plot of Posterior Densities for Mean Yields",
+       subtitle = "90% and 95% credible intervals shown")+
+  theme(plot.title =element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
 ```
   
   Visually we can deduce similarity between groups as overlapping credible intervals. As expected *f2* crosses all groups and once again the significant difference between *f4* and *f1* can be seen as there is no overlap between their 95% credible intervals.
 
+---
+
 __*Part (i) Compare Frequentist and Bayesian 95% confidence intervals*__
 
-  Both ANOVA analysis methods have allowed us to reject the null hypothesis from section (b) and the implied mean yield values from section (c) ($\mu_f = \mu_1 + \alpha_f$) agree with the mean yelds computed in section (f). 
+  Both ANOVA analysis methods have allowed us to reject $H_{0(b)}$ and the implied mean yield values from section (c) ($\mu_f = \mu_1 + \alpha_f$) agree with the mean yelds computed in section (f). 
   
   An advantage of the frequentist method is that the p-value of the F-statistic provides us with a singular statistic from which we accept/reject our null hypothesis. The Bayesian approach provides us a richer description of the potential underlying system although reaching a conclusion on our null hypothesis is a more complex process. 
   
+---
+
 __*Part (j) Bayesian analysis of differences in $\alpha_f$*__
 
-  We will use the following JAGS code to infer the posterior distributions for each of the hypotheses laid out in sections (d) and (e):
+  We will use the following JAGS code to infer the posterior distributions that allow us to test all of the null hypotheses from section (d) and $H_{0(e)}$
 ```{r JAGS_alpha_delta, results='hide'}
 delta_alpha_model <- function(){
   
@@ -239,40 +268,47 @@ delta_alpha_model <- function(){
   }
   
   # Track value for part (e) hypothesis
-  Alpha_four_test <- alpha[4] - ((alpha[1] + alpha[2] + alpha[3])/3)
+  mu_four_test <- alpha[4] - ((alpha[1] + alpha[2] + alpha[3])/3)
 }
 
 delta_alpha_inference <- jags(data = data_anova, 
-                              parameters.to.save = c("AlphaDelta","Alpha_four_test"), 
-                              n.iter = 2000000, n.chains = 1, 
+                              parameters.to.save = c("AlphaDelta","mu_four_test"), 
+                              n.iter = 3000000, n.chains = 1, 
                               model.file = delta_alpha_model)
 ```
 ```{r print_results}
-print(delta_alpha_inference, intervals = c(0.025,0.5,0.975))
+da_data <- delta_alpha_inference[[2]]$summary[-7,c(1,2,3,5,7)]
+print(da_data)
 ```
-  First lets evaluate the hypotheses from section (d), in order for a null hypothesis to be rejected we are looking for the entirety of the 95% credible interval to be > 0. From this criteria we can reject the following null hypotheses:
+  First lets evaluate the null hypotheses from section (d), for these to be rejected we are looking for the entirety of the 95% credible interval to be > 0. From this criteria we can confidently reject the following null hypotheses:
+\begin{center}
+  $H_{0(d4:1)}$ : $\alpha_{f4}$ - $\alpha_{f1}$ = 0
+\end{center}
   
-  - $H_0$ : $\alpha_{f3}$ - $\alpha_{f1}$ = 0
-  - $H_0$ : $\alpha_{f4}$ - $\alpha_{f1}$ = 0
+  We can also see that the 95% credible interval for the difference *f1* and *f3* is marginally > 0. This is an interesting contradiction to our results from section (d) as our Bayesian analysis also allows us to reject the additional null hypothesis:
   
-  Whilst this confirms the conclusion of section (d) we get an interesting contradiction with regards to the difference between *f3* and *f1*, our Bayesian method marginally accepts that this difference is significant. 
+\begin{center}
+  $H_{0(d3:1)}$ : $\alpha_{f3}$ - $\alpha_{f1}$ = 0
+\end{center}
   
-  For our Bayesian analysis of section (e) we first consider the 95% credible interval for Alpha_four_test presented above. The low end has a value that is < 0.5 so we could decide not to reject our null hypothesis. However if we apply the reported $\mu$ and sd values from this test as parameters to a normal distribution we can investigate further. 
+  For our Bayesian analysis of $H_{0(e)}$ we first consider the 95% credible interval for mu_four_test presented above. The low end has a value that is < 0.5 so we could decide not to reject our null hypothesis. However if we apply the reported $\mu$ and sd values from this test as parameters to a normal distribution we can investigate further. 
   
   For example the probability that the underlying difference between $\mu_4$ and the average of the other means is greater than 0.5 can be calculated as:
 ```{r mu4prob}
-mu <- delta_alpha_inference$BUGSoutput$summary[7,1]
-sd <- delta_alpha_inference$BUGSoutput$summary[7,2]
+mu <- delta_alpha_inference$BUGSoutput$summary[8,1]
+sd <- delta_alpha_inference$BUGSoutput$summary[8,2]
 1 - pnorm(0.5,mu,sd)
 ```
   Which is greater than the 95% confidence/credibility we have been applying elsewhere. If we decide to disregard the upper 2.5% of the distribution as outliers then our probability drops to:
 ```{r mu4p2}
 (1-pnorm(0.5,mu,sd)) - (1-(pnorm((qnorm(0.975,mu,sd)),mu,sd)))
 ```
-  For consistency we will maintain a centralised 95% confidence interval and accept the null hypothesis from section (e), however the marginality of this decision is of interest and should be reported to stakeholders. 
+  For consistency we will maintain a centralised 95% confidence interval and accept $H_{0(e)}$, however the marginality of this decision is of interest and should be reported to stakeholders. 
   
-  Above we have seen some contrasting conclusions between frequentist and Bayesian methods for the null hypotheses from sections (d) and (e). The authors opinion is that the Bayesian analysis should be followed as our data set is small and the frequentist methods are more susceptible to variance upon re-sampling.
+  Above we have seen some contrasting conclusions between frequentist and Bayesian methods for the hypotheses $H_{0(d)}$ and $H_{0(e)}$. The authors opinion is that the Bayesian analysis should be followed as our data set is small and the frequentist methods are more susceptible to variance upon re-sampling.
   
+---
+
 ## 3.2.3 Simpler Bayesian model
 
 __*Part (k) JAGS code for simple Bayesian model*__
@@ -299,22 +335,46 @@ simple_bayes_model <- function(){
 simple_jags <- jags(data = data_anova, 
                     parameters.to.save = c("fertilizer","sigma","tau"), 
                     n.iter = 100000, n.chains = 3, model.file = simple_bayes_model)
-
-print(simple_jags, intervals = c(0.025,0.5,0.975))
+```
+```{r simp_print}
+simp_data <- simple_jags[[2]]$summary[c(2:6),c(1,2,3,5,7)]
+row.names(simp_data) <- c("mean_yield_f1","mean_yield_f2","mean_yield_f3","mean_yield_f4","standard_deviation")
+print(simp_data)
 ```
 
-  
-  
+---
+
 __*Part (l) Graphical representations of the simple model*__
 
+  Above we can see the 95% credible intervals for our simpler model. This model forgoes alpha values and instead leaves us to directly interpret inter-group differences by directly analysing the mean yield results. As before we can visualise the credible intervals of our posterior distributions using a caterpillar plot:
   
 ```{r plot_simp_post}
 ggs_simple <- ggs(as.mcmc(simple_jags))
-ggs_caterpillar(ggs_simple,family = "^fertilizer")
+ggs_caterpillar(ggs_simple)+
+  ylab("")+
+  xlab("Crop yield (ton/hectare)")+
+  labs(title = "Caterpillar Plot of Posterior Densities for Mean Yields",
+       subtitle = "90% and 95% credible intervals shown")+
+  theme(plot.title =element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
 ```
 
-  BLURB - Brief comment
+---
   
 __*Part (m) Comparison of Bayesian models*__
 
-  O look - more BLURB 
+  When comparing Bayesian models of sections (f) and (k) the authors prefer the simpler model of section (k) as it allows us to reach the same conclusions using cleaner, more readable code. The model in section (f) is specifically written to test $H_{0(b)}$ however this can still be tested with our simpler model if we re-write the it to the equivalent form of:
+\begin{center}
+  $H_{0(b)} : \mu_1=\mu_2=\mu_3=\mu_4$
+\end{center}
+
+  We can investigate the Deviance Information Criterion (DIC) scores for each of the models as follows:
+  
+```{r compare_dic}
+Bayesian_anova_inference[[2]]$DIC
+simple_jags[[2]]$DIC
+```
+  Whilst the scores are close we can see that our simpler model actually has a lower DIC score implying that it is less prone to error and thereby the prefferable model.
+
+
+---
