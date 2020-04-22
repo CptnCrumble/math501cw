@@ -1,0 +1,708 @@
+---
+title: "**Report_10657769_10651875**"
+author: "By: Aderibigbe Olugbenga & Paul Hazell"
+date: "22/04/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)
+library(caret)
+library(e1071)
+library(class)
+library(randomForest)
+library(tree)
+library(tidyr)
+library(RColorBrewer)
+library(multcomp)
+library(R2jags)
+library(ggmcmc)
+```
+# 3.1 Machine Learning Task
+
+__*Part (a) Selecting parameters*__
+
+```{r data, include=FALSE}
+orchid <- read.table(url("https://gist.githubusercontent.com/CptnCrumble/e01af3b83ffc463f4bb5776d0213f14b/raw/5382eee21b6e5b796541fd8053c5f733fd6eb9c7/orchids.txt"))
+attach(orchid)
+```
+
+Graph of bivariate scatter plots to distinguish between the three locations of Orchids     
+  
+   
+     
+```{r, include=TRUE, echo=FALSE}
+ggplot(orchid, aes( x = X1, y = X2)) +
+  geom_point(aes (color = factor(loc)), shape = 16, size = 2)+
+  theme_classic()+
+  labs(title ="Orchids graph", x = "Petal length (mm)", y = "Leaf width (mm)", color = "Orchids Location\n")
+```
+   
+   
+Boxplots of the data to choose two characteristcs that should be used as predictors for orchids' locations. 
+
+```{r, include=TRUE, echo=FALSE}
+boxplot(X1 ~ loc, 
+        xlab = "Location", 
+        ylab = "Petal length",
+        col = c("#F8766D", "#7CAE00", "#00BFC4"))
+
+boxplot(X2 ~ loc, 
+        xlab = "Location", 
+        ylab = "Leaf width",
+        col = c("#F8766D", "#7CAE00", "#00BFC4"))
+
+boxplot(X3 ~ loc, 
+        xlab = "Location", 
+        ylab = "Petal width",
+        col = c("#F8766D", "#7CAE00", "#00BFC4"))
+```
+
+From the graph it can be seen that there is a considerable difference between the mean values of the Petal length (X1) and Leaf width (X2).
+
+```{r, include=TRUE, echo=FALSE}
+aggregate(X1 ~ loc, FUN = mean)
+aggregate(X2 ~ loc, FUN = mean)
+```
+
+
+Whereas the difference between the mean Petal width (X3) with different locations is not much.   
+```{r, include=TRUE, echo=FALSE}
+aggregate(X3 ~ loc, FUN = mean)
+```
+   
+   
+So the Petal length and Leaf width data will be used as predictors for the orchids' locations.
+
+---
+
+__*Part (b) Training data*__
+
+Creating a training set 210 randomly chosen
+data points and a test set of 60 data points.
+```{r, include=TRUE, echo=TRUE}
+set.seed(1)
+data.subset <- sample(270, 210)
+model.train <- orchid[data.subset,]
+model.test <- orchid[-data.subset,]
+```
+
+---
+
+__*Part (c) KNN Method*__
+
+
+```{r, include=TRUE, echo=TRUE}
+# Create knn model
+set.seed(1)
+model.knn <- train(loc~.-X3, 
+                   data = model.train, 
+                   method = "knn", 
+                   trControl = trainControl(method  = "LOOCV"),
+                   preProcess = c("center", "scale"), # Normalize the data
+                   tuneLength = 10) # Number of possible K values to evaluate
+```
+   
+Graph showing the accuracy of K   
+   
+```{r, include=TRUE, echo=FALSE}
+plot(model.knn, main="Leave-One-Out Cross-Validation accuracy for varying sizes of K",xlab="K",ylab="Accuracy")
+```
+
+The best optimal k value is `r model.knn$bestTune`  
+
+
+```{r, include=TRUE, echo=TRUE}
+# Predicting the test model
+predict.knn <- model.knn %>% predict(model.test)
+```
+
+```{r, include=TRUE, echo=FALSE}
+pl = seq(min(model.test$X1), max(model.test$X1), by=0.1)
+pw = seq(min(model.test$X2), max(model.test$X2), by=0.1)
+
+# generates the boundaries for the graph
+lgrid <- expand.grid(X1=pl, X2=pw, X3=19.73)
+
+knnPredGrid <- predict(model.knn, newdata=lgrid)
+
+knnPredGrid <- model.knn %>% predict(lgrid)
+
+knnPredGrid = as.numeric(knnPredGrid)
+
+predict.knn <- as.numeric(predict.knn)
+
+model.test$loc <- predict.knn
+
+probs <- matrix(knnPredGrid, 
+                length(pl), 
+                length(pw))
+
+colour_map <- function(x){
+  if(x==1){return("#F8766D")}
+  else if(x==2){return("#7CAE00")}
+  else{return("#00BFC4")}
+}
+
+plot_colors<- apply(probs,1:2,colour_map)
+  
+contour(pl, pw, probs, labels="", 
+        xlab="Petal length (mm)", ylab="leaf width (mm)", 
+        main="KNN predictions of Orchid location", axes=T)
+
+gd <- expand.grid(x=pl, y=pw)
+
+points(gd, pch=3, col=plot_colors, cex= 0.1)
+
+# add the test points to the graph
+
+plot_points <- sapply(model.test$loc,colour_map)
+
+points(model.test$X1, model.test$X2, col= plot_points, cex= 2, pch = 20) 
+```
+
+---
+
+__*Part (d) Random Forest Bagging method*__
+
+```{r, include=TRUE, echo=FALSE}
+# Create Random Forest Bagging Model
+set.seed(1)
+bag.tree <- randomForest(loc ~ . -X3, data = orchid, subset = data.subset,
+                         mtry = 2, importance = TRUE)
+round(importance(bag.tree), 2)
+```
+
+```{r, include=TRUE, echo=FALSE}
+# Predicting the test data
+bag_predict <- predict(bag.tree, model.test, type = "class")
+```
+
+```{r, include=TRUE, echo=FALSE}
+lgrid <- expand.grid(X1=pl, X2=pw, X3=19.73)
+
+bagPredGrid <- predict(bag.tree, newdata=lgrid)
+
+bagPredGrid <- bag.tree %>% predict(lgrid)
+
+bagPredGrid = as.numeric(bagPredGrid)
+
+predict.bag <- as.numeric(bag_predict)
+
+model.test$loc <- predict.bag
+
+probs <- matrix(bagPredGrid, length(pl), length(pw))
+
+contour(pl, pw, probs, labels="", 
+        xlab="Petal length (mm)", ylab="Leaf width (mm)", 
+        main="Random Forest Bagging method", axes=T)
+
+gd <- expand.grid(x=pl, y=pw)
+
+plot_colors<- apply(probs,1:2,colour_map)
+points(gd, pch=3, col=plot_colors, cex=0.1)
+
+# add the test points to the graph
+plot_points <- sapply(model.test$loc,colour_map)
+points(model.test$X1, model.test$X2, col= plot_points, cex= 2, pch = 20)
+```
+
+---
+
+__*Part (e) Support Vector Machines*__
+
+Linear kernel
+
+```{r, include=TRUE, echo=TRUE}
+set.seed(1)
+tune.out = tune(svm, loc ~ X1 + X2, data = orchid[data.subset,],
+                kernel ="linear",
+                ranges = list(cost = seq(from = 0.01,to = 2, length = 40) ))
+```
+
+Choosing the best cost parameter  
+  
+    
+```{r, include=TRUE, echo=TRUE}
+plot(tune.out$performances$cost, tune.out$performances$error, 
+     main = "Perfomance error against cost for Linear Kernel",
+     xlab = "Performance Cost",ylab = "Performance Error")
+```
+
+The best cost parameter for the linear kernel is `r tune.out$best.model$cost`
+
+```{r, include=TRUE, echo=FALSE}
+bestmod = tune.out$best.model
+plot(bestmod, data = model.test, X2~X1)
+```
+
+```{r, include=TRUE, echo=TRUE}
+# Predicting test result linear
+ypred_linear = predict(bestmod, model.test)
+```
+
+
+Polynomial Kernel
+
+
+```{r, include=TRUE, echo=TRUE}
+# Create Polynomial Kernel
+set.seed(1)
+tune.out_poly = tune(svm, loc ~ X1 + X2, data = orchid[data.subset,],
+                     kernel ="polynomial",
+                     ranges = list(cost = seq(from = 0.01,to = 3, length = 30)))
+
+```
+
+Choosing the best cost parameter   
+   
+   
+```{r, include=TRUE, echo=TRUE}
+plot(tune.out_poly$performances$cost, tune.out_poly$performances$error, 
+     main = "Perfomance error against cost for Polynomial Kernel",
+     xlab = "Performance Cost",ylab = "Performance Error")
+```
+
+The best cost parameter for the Polynomial kernel is `r tune.out_poly$best.model$cost`  
+
+```{r, include=TRUE, echo=FALSE}
+bestmod_poly = tune.out_poly$best.model
+plot(bestmod_poly, data = model.test, X2~X1)
+```
+
+```{r, include=TRUE, echo=FALSE}
+# Predicting test result Polynomial
+ypred = predict(bestmod_poly, model.test)
+```
+
+Computing the accuracy from the confusion matrix it can be seen that the accuracy from the Linear Kernel is higher than that of the Polynomial Kernel. It would be best to choose the kernel with the higher accuracy which is the Linear Kernel
+
+---
+
+__*Part (f) Comparison*__
+
+**Test Accuracy for KNN Method**    
+
+```{r, include=TRUE, echo=FALSE}
+# KNN method
+tab <- table(predict.knn,model.test$loc)
+tab
+1-(sum(tab) - sum(diag(tab))) / sum(tab)
+```
+
+**Test Accuracy for Random Forest Bagging Method**    
+   
+```{r, include=TRUE, echo=FALSE}
+# Random forest bagging method
+tab.bag <- table(bag_predict,model.test$loc)
+tab.bag
+1-(sum(tab.bag) - sum(diag(tab.bag))) / sum(tab.bag)
+```
+
+**Test Accuracy for Linear Kernel Support Vector**   
+   
+```{r, include=TRUE, echo=FALSE}
+# Support vector machine Linear
+tab.linear <- table(ypred_linear,model.test$loc)
+tab
+1-(sum(tab.linear) - sum(diag(tab.linear))) / sum(tab.linear)
+```
+
+**Test Accuracy for Polynomial Kernel Support Vector**   
+   
+```{r, include=TRUE, echo=FALSE}
+# Support vector machine Polynomial kernel
+tab.poly <- table(ypred,model.test$loc)
+tab.poly
+1-(sum(tab.poly) - sum(diag(tab.poly))) / sum(tab.poly)
+```
+
+From our results it can be seen that the model with the best accuracy is the Random Forest Bagging method.    
+This method came out as the best because the Bagging method helps in increasing the accuracy of the Random Forest method and also helps reduce variance of the model to help in predicting accurate results.
+
+---
+
+
+# 3.2 Bayesian Tasks
+## 3.2.1 Frequentist One-Way Analysis of Variance
+```{r data, include=FALSE}
+df_long <- read.csv('https://gist.githubusercontent.com/CptnCrumble/d4642a73f553e96da659bf4edf8243da/raw/8bea16ca3e2a22e87c5e7cab185adcb5dcd38ac9/math501data.csv',header = FALSE)
+colnames(df_long) <- c("Fertilizer","Yield","plot_size")
+```
+__*Part (a) Visualise the data*__
+
+  In the plot below crop yields are grouped by the fertilizer used upon the field and repeated yield values are shown as stacked circles. The mean yield for each fertilizer group is marked by a blue diamond. 
+  
+  
+```{r yield_plot, echo=FALSE}
+ggplot(data=df_long, aes(x=Fertilizer, y=Yield))+
+  geom_point(data=df_long,pch=21,alpha=0.75,aes(bg=Fertilizer, size=plot_size))+
+  scale_size_continuous(range = c(10,8))+
+  labs(title = "Crop yield grouped by fertilizer used upon the field",
+       subtitle = "Repeat values shown as stacked cicles")+
+  xlab("Fertilizer used")+
+  ylab("Crop Yield (ton/hectare)")+
+  scale_fill_brewer(palette="Spectral")+
+  stat_summary(fun.y = mean, colour="darkblue", geom = "point", shape = 18, size = 2.5, 
+               show.legend = TRUE) + 
+  stat_summary(fun.y = mean, colour = "darkblue", geom = "text", show.legend = FALSE, 
+               vjust = -0.75, aes(label = round(..y.., digits = 3)))+
+  theme(legend.position = "none", plot.title =element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        axis.text.y = element_text(size = 13))+
+  scale_y_continuous(breaks=seq(0, 9, 1))+
+  coord_flip()
+```
+ 
+  Our visualisation shows a trend of rising means across the fertilizer groups supporting the idea that a fields crop yield is influenced by the fertilizer used. However our data set is small, variance is considerable and we can see large overlaps in the ranges of yields for each of the groups. 
+
+---
+
+__*Part (b) Interpretation of the parameter $\alpha$*__
+
+  For a given fertilizer group $\alpha$ represents the difference between the groups mean crop yield and the mean crop yield for group *f1*, for example $\alpha_f > 0$ implies that the field is more productive than *f1*.
+  
+  If $\alpha$ = 0 for all of our groups then our data provides no evidence that these fertilizers have different effects on crop yield.
+  A null hypothesis of there being no difference in crop yield between the fertilizer groups can be articulated as:
+  
+\begin{center}
+  $H_{0(b)}$ : $\alpha_{f2}$ = $\alpha_{f3}$ = $\alpha_{f4}$ = 0
+\end{center}
+  
+
+---
+  
+__*Part (c) Frequentist ANOVA*__
+
+  To undertake frequentist ANOVA on our dataset first we generate a linear model for crop yield dependant upon fertilizer group.
+```{r lm}
+yield_lm <- lm(Yield ~ Fertilizer,data = df_long)
+```
+  From this model we can derive the mean crop yield value for *f1* and the $\alpha$ values for the other groups.
+```{r alphas}
+# rename data for a cleaner results table
+names(yield_lm$coefficients) <- c("f1_mean","f2_alpha","f3_alpha","f4_alpha")
+summary(yield_lm)
+```
+  An ANOVA test on our linear model returns the following results:
+```{r anova}
+anova(yield_lm)
+```
+  Given that the size of this ANOVA test is 0.05 our p-value of 0.03388 means we can reject $H_{0(b)}$ and conclude that crop yield is different when different fertilizers are used.
+  
+---
+  
+__*Part (d) Tukey Honest Significant Differences Test*__
+
+  We will now investigate inter-field crop yield differences using a Tukey Honest Significant Difference test. The null hypotheses for this test are:
+\begin{center}
+
+   $H_{0(d2:1)}$ : $\alpha_{f2}$ - $\alpha_{f1}$ = 0\\
+   $H_{0(d3:1)}$ : $\alpha_{f3}$ - $\alpha_{f1}$ = 0\\
+   $H_{0(d4:1)}$ : $\alpha_{f4}$ - $\alpha_{f1}$ = 0\\
+   $H_{0(d3:2)}$ : $\alpha_{f3}$ - $\alpha_{f2}$ = 0\\
+   $H_{0(d4:2)}$ : $\alpha_{f4}$ - $\alpha_{f2}$ = 0\\
+   $H_{0(d4:3)}$ : $\alpha_{f4}$ - $\alpha_{f3}$ = 0\\
+
+\end{center}
+  The code and results of our Tukey test are as follows:
+```{r Tukey_result}
+yield_aov <- aov(Yield ~ Fertilizer,data = df_long)
+TukeyHSD(yield_aov)
+```
+
+  Whilst all groups have a non zero difference in mean yields only the difference between *f4* and *f1* passes our significance value of 0.05 hence the only null hypothesis that we can reject is:
+\begin{center}
+  $H_{0(d4:1)}$ : $\alpha_{f4}$ - $\alpha_{f1}$ = 0
+\end{center}
+
+  Whilst we can be confident that *f4* is more productive than *f1* we have little certainity in the extent of the increase we are seeing. The mean increase of 3 ton/hectare would represent a near doubling of productivity for *f1* but the confidence intervals of our Tukey test show the true value lies somewhere between the negligible 0.33 ton/hectare and an impressive 5.6 ton/hectare. Achieving a higher accuracy on this figure would require further data collection and analysis. 
+
+---
+
+__*Part (e) Is the underlying crop yield level for _f4_ more than 0.5 units greater than the average of the underlying crop yield levels obtained using the other three fertilizers? *__
+
+  In order to answer this question we will look to reject the following null hypothesis:
+\begin{center}
+  $H_{0(e)}$ : $\mu_4$ - $\left(\mu_1 + \mu_2 + \mu_3 / 3 \right) \le 0.5$
+\end{center}
+
+  To test $H_{0(e)}$ we will run a mean parameterised version of our linear model through a generalised linear hypothesis test, the results of which can be seen below.
+```{r glht}
+yield_lm_mp <- lm(Yield ~ Fertilizer -1, data = df_long)
+# rename data for a cleaner results table
+names(yield_lm_mp$coefficients) <- c("f1","f2","f3","f4")
+ght <- glht(yield_lm_mp,linfct="f4 - ((f1 + f2 + f3)/3) <= 0.5")
+summary(ght)
+```
+  
+  The above results state that if we pressume $H_{0(e)}$ to be true then the probability of $\mu_4$ - $\left(\mu_1 + \mu_2 + \mu_3 / 3 \right) \ge$ 1.882 is 0.0391. 
+  
+  Taking the complement of this probability we can state that if we pressume $H_{0(e)}$ to be false then the probability $\mu_4$ - $\left(\mu_1 + \mu_2 + \mu_3 / 3 \right) \ge$ 1.882 is 0.9609. 
+  
+  Since 1.882 > 0.5 we can reasonably conclude that the $\mu_4$ is more than 0.5 units greater than the average of the other underlying yields and reject $H_{0(e)}$.
+  
+---
+  
+## 3.2.2 Bayesian One-way ANOVA
+
+__*Part (f) One way ANOVA using JAGS*__
+
+  The JAGS code we will use to undertake our ANOVA is as follows:
+```{r JAGS_ANOVA, results='hide'}
+# yield values
+y <- df_long$Yield
+# fertilizer groups - convert group to numeric factor
+g1 <- df_long$Fertilizer
+g2 <- substr(g1,2,2)
+group <-as.factor(as.numeric(g2))
+# number of data points
+n <- length(y)
+# number of groups 
+g <- 4
+data_anova <- list("y", "group", "n", "g")
+
+# JAGS model
+Bayesian_anova <- function(){
+  # Likelihood function
+  for(k in 1:n){
+    y[k] ~ dnorm(mu[k], tau) 
+    mu[k] <- m + alpha[group[k]] 
+  }
+  
+  # Priors - objective with uniform variance
+  m ~ dnorm(0.0, 0.0001)
+  alpha[1] <- 0 
+  for(i in 2:g){ 
+    alpha[i] ~ dnorm(0.0,0.0001)
+  }
+  tau ~ dgamma(0.001,0.001)
+  sd = 1/sqrt(tau)
+  
+  # Tracking the mean yield values
+  mean_yield[1] = m + alpha[1]
+  mean_yield[2] = m + alpha[2]
+  mean_yield[3] = m + alpha[3]
+  mean_yield[4] = m + alpha[4]
+}
+
+Bayesian_anova_inference <- jags(data = data_anova, 
+                                 parameters.to.save = c("alpha","mean_yield"), 
+                                 n.iter = 100000, n.chains = 3, 
+                                 model.file = Bayesian_anova)
+```
+```{r print}
+anova_data <- Bayesian_anova_inference[[2]]$summary[c(-1,-5),c(1,2,3,5,7)]
+print(anova_data)
+```
+
+---
+
+__*Part (g) Graphical representation of posterior densities*__
+  
+```{r posterior_plot}
+mcmc_data <- as.mcmc(Bayesian_anova_inference)
+ggs_data <- ggs(mcmc_data)
+ggs_density(ggs_data, family = "^alpha")+xlim(-10,10)+
+  theme(plot.title =element_text(hjust = 0.5))+
+  ggtitle("Posterior Distributions of Alpha Values")+
+  xlab("Crop Yield (ton/hectare)")+
+  ylab("Probability Desinty")
+```
+
+  The first thing to note from the above plot is that the posterior distributions of the three chains are closely alligned, this shows our JAGS code was able to consistently sample and gives us confidence in our results. $\alpha_1$ is of course centered around zero and by scanning the peaks of probability density across each of the distributions we can see a similar pattern to the rising means observed in section (a). 
+  
+  By observing the proportion of each distributions that is < 0 we can also gain an idea of whether or not we can reject $H_{0(b)}$. For example its quite clear $\alpha_2$ does not allow us to reject $H_{0(b)}$ but there is a good chance $\alpha_4$ and perhaps even $\alpha_3$ will allow us to do so.
+
+---
+
+__*Part (h) 95% Credible Interval Analysis*__
+
+   
+```{r cred_int_mu}
+ggs_caterpillar(ggs_data,family = "^alpha")+
+  ylab("")+
+  xlab("Difference in Crop yield with group f1 (ton/hectare)")+
+  labs(title = "Caterpillar Plot of Posterior Densities for Alpha Values",
+       subtitle = "90% and 95% credible intervals shown")+
+  theme(plot.title =element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
+```
+
+  Above we see a caterpillar plot for the 95% and 90% credible intervals of the distributions shown in section (g). Here we can see that the 95% credible intervals for $\alpha_4$ and $\alpha_3$ only contain values > 0 thereby allowing us to reject $H_{0(b)}$, pressuming that crop yield is a continuous parameter.
+  
+  Whilst intuitively we would expect crop yield to be continuous this fact is not given nor supported by the data. If we take crop yield to be discrete then we can no longer use $\alpha_3$ to reject $H_{0(b)}$ as a significant proportion of its credible interval is < 1, however we are still able to reject $H_{0(b)}$ on the basis that the credible interval of $\alpha_4$ is completely > 1.
+  
+  For a wider view of the data we present a caterpillar plot of credible intervals for mean yields.
+  
+```{r alpha_cat, echo=FALSE}
+ggs_caterpillar(ggs_data,family = "^mean_yield")+
+  ylab("")+
+  xlab("Crop yield (ton/hectare)")+
+  labs(title = "Caterpillar Plot of Posterior Densities for Mean Yields",
+       subtitle = "90% and 95% credible intervals shown")+
+  theme(plot.title =element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
+```
+  
+  Visually we can deduce similarity between groups as overlapping credible intervals. As expected *f2* crosses all groups and once again the significant difference between *f4* and *f1* can be seen as there is no overlap between their 95% credible intervals.
+
+---
+
+__*Part (i) Compare Frequentist and Bayesian 95% confidence intervals*__
+
+  Both ANOVA analysis methods have allowed us to reject $H_{0(b)}$ and the implied mean yield values from section (c) ($\mu_f = \mu_1 + \alpha_f$) agree with the mean yields computed in section (f). 
+  
+  We can also see little difference between the confidence intervals of the frequentist approach and the credible intervals of the Bayesian approach in the following table:
+  
+```{r con-con, echo=FALSE}
+cred_i <- Bayesian_anova_inference[[2]]$summary[c(2,3,4),c(3,7)]
+conf_i <- confint(yield_lm)[-1,]
+intervals <- cbind(conf_i[,1],cred_i[,1],(conf_i[,1] - cred_i[,1]),conf_i[,2],cred_i[,2],((conf_i[,2] - cred_i[,2])))
+row.names(intervals) <- c("alpha2","alpha3","alpha4")
+colnames(intervals) <- c("conf_lower","cred_2.5%","diff","conf_upper","cred_97.5%","diff")
+intervals
+```
+  
+  
+---
+
+__*Part (j) Bayesian analysis of differences in $\alpha_f$*__
+
+  We will use the following JAGS code to infer the posterior distributions that allow us to test all of the null hypotheses from section (d) and $H_{0(e)}$
+```{r JAGS_alpha_delta, results='hide'}
+delta_alpha_model <- function(){
+  
+  # Likelihood function
+  for(k in 1:n){
+    y[k] ~ dnorm(mu[k], tau) 
+    mu[k] <- m + alpha[group[k]] 
+  }
+  
+  # Priors - objective with uniform variance
+  m ~ dnorm(0.0, 0.0001)
+  tau ~ dgamma(0.001,0.001)
+  
+  for(i in 1:g){ 
+    alpha[i] ~ dnorm(0.0,0.0001)
+    for (n in 1:(i-1)) {
+      AlphaDelta[n,i] <- alpha[i]-alpha[n] # Track values for (d) hypotheses
+    }
+  }
+  
+  # Track value for part (e) hypothesis
+  mu_four_test <- alpha[4] - ((alpha[1] + alpha[2] + alpha[3])/3)
+}
+
+delta_alpha_inference <- jags(data = data_anova, 
+                              parameters.to.save = c("AlphaDelta","mu_four_test"), 
+                              n.iter = 3000000, n.chains = 1, 
+                              model.file = delta_alpha_model)
+```
+```{r print_results}
+da_data <- delta_alpha_inference[[2]]$summary[-7,c(1,2,3,5,7)]
+print(da_data)
+```
+  First lets evaluate the null hypotheses from section (d), for these to be rejected we are looking for the entirety of the 95% credible interval to be > 0. From this criteria the result from row Alpha[1,4] allows us to confidently reject the following null hypotheses:
+\begin{center}
+  $H_{0(d4:1)}$ : $\alpha_{f4}$ - $\alpha_{f1}$ = 0
+\end{center}
+  
+  If you investigate the result Alpha[1,3] you may well see that its 95% credible interval is > 0 and conclude that $H_{0(d3:1)}$ can be rejected. However througout the writing of this report we have re-run this model many times and have observed that the absolute value of the 2.5% credible interval is always very close to zero, sometimes it is > 0 and we can reject $H_{0(d3:1)}$ and sometimes we cannot. Given this inconsistency we conclude that $H_{0(d3:1)}$ cannot be rejected by our results.
+  
+  For our Bayesian analysis of $H_{0(e)}$ we first consider the 95% credible interval for mu_four_test presented above. The low end has a value that is < 0.5 so we could decide not to reject our null hypothesis. However if we apply the reported $\mu$ and sd values from this test as parameters to a normal distribution we can investigate further. 
+  
+  For example the probability that the underlying difference between $\mu_4$ and the average of the other means is greater than 0.5 can be calculated as:
+```{r mu4prob}
+mu <- delta_alpha_inference$BUGSoutput$summary[8,1]
+sd <- delta_alpha_inference$BUGSoutput$summary[8,2]
+1 - pnorm(0.5,mu,sd)
+```
+  Which is greater than the 95% confidence/credibility we have been applying elsewhere. If we decide to disregard the upper 2.5% of the distribution as outliers then our probability drops to:
+```{r mu4p2}
+(1-pnorm(0.5,mu,sd)) - (1-(pnorm((qnorm(0.975,mu,sd)),mu,sd)))
+```
+  For consistency we will maintain a centralised 95% confidence interval and accept $H_{0(e)}$, however the marginality of this decision is of interest and should be reported to stakeholders. 
+  
+  Above we have seen some contrasting conclusions between frequentist and Bayesian methods for the hypotheses $H_{0(d)}$ and $H_{0(e)}$. The authors opinion is that the Bayesian analysis should be followed as our data set is small and the frequentist methods are more susceptible to variance upon re-sampling.
+  
+---
+
+## 3.2.3 Simpler Bayesian model
+
+__*Part (k) JAGS code for simple Bayesian model*__
+
+  The JAGS code we will use to infer posterior distributions based upon the given simple model is as follows:
+```{r simple_jags, results='hide'}
+simple_bayes_model <- function(){
+  
+  # Likelihood function
+  for(k in 1:n){
+    y[k] ~ dnorm(mu[k], tau)
+    mu[k] <- fertilizer[group[k]]
+  }
+  
+  # Priors - objective with uniform variance
+  for(i in 1:g){ 
+    fertilizer[i] ~ dnorm(0.0,0.0001)
+  }
+  
+  tau ~ dgamma(0.001,0.001)
+  sigma = 1/sqrt(tau)
+}
+
+simple_jags <- jags(data = data_anova, 
+                    parameters.to.save = c("fertilizer","sigma","tau"), 
+                    n.iter = 100000, n.chains = 3, model.file = simple_bayes_model)
+```
+```{r simp_print}
+simp_data <- simple_jags[[2]]$summary[c(2:6),c(1,2,3,5,7)]
+row.names(simp_data) <- c("mean_yield_f1","mean_yield_f2",
+                          "mean_yield_f3","mean_yield_f4","standard_deviation")
+print(simp_data)
+```
+
+---
+
+__*Part (l) Graphical representations of the simple model*__
+
+  Above we can see the 95% credible intervals for our simpler model. This model forgoes alpha values and instead leaves us to directly interpret inter-group differences by  analysing the mean yield results. We can see that the $\mu$ and $\sigma$ values for the posterior densities of the mean yields closely match their counterpart values from section (f).
+  
+  As before we can visualise the credible intervals of our posterior distributions using a caterpillar plot:
+  
+```{r plot_simp_post}
+ggs_simple <- ggs(as.mcmc(simple_jags))
+ggs_caterpillar(ggs_simple,family = "^fertilizer")+
+  ylab("")+
+  xlab("Crop yield (ton/hectare)")+
+  labs(title = "Caterpillar Plot of Posterior Densities for Mean Yields",
+       subtitle = "90% and 95% credible intervals shown")+
+  theme(plot.title =element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
+```
+
+  Once again by analysing the credible intervals and caterpillar plot we can deduce that *f4* offers a significantly increased mean yield ovr group *f1*.
+
+---
+  
+__*Part (m) Comparison of Bayesian models*__
+
+  When comparing Bayesian models of sections (f) and (k) the authors prefer the simpler model of section (k) as it allows us to reach the same conclusions using cleaner, more readable code. The model in section (f) is specifically written to test $H_{0(b)}$ however this can still be tested with our simpler model if we re-write it to the equivalent form of:
+\begin{center}
+  $H_{0(b)} : \mu_1=\mu_2=\mu_3=\mu_4$
+\end{center}
+
+
+  As shown in section (l) both methods produce comparable results, we can support this by seeing how similar the Deviance Information Criterion (DIC) scores for the two models are:
+```{r compare_dic}
+Bayesian_anova_inference[[2]]$DIC
+simple_jags[[2]]$DIC
+```
+  Since neither model is significantly more or less prone to error then we can conclude that the simpler model is preffered thanks to its increased clarity.
+
+
+---
