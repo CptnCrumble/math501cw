@@ -1,10 +1,10 @@
 ---
-title: "**3.1 Machine Learning Task**"
+title: "**Report_OLUMBENGA_10657769**"
 author: "By: Aderibigbe Olugbenga & Paul Hazell"
 date: "18/04/2020"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -17,16 +17,16 @@ library(class)
 library(randomForest)
 library(tree)
 ```
+# 3.1 Machine Learning Task
 
-### Machine Learning Part (a)
+__*Part (a) Selecting parameters*__
 
 ```{r data, include=FALSE}
 orchid <- read.table(url("https://gist.githubusercontent.com/CptnCrumble/e01af3b83ffc463f4bb5776d0213f14b/raw/5382eee21b6e5b796541fd8053c5f733fd6eb9c7/orchids.txt"))
 attach(orchid)
 ```
 
-Graph of bivariate scatter plots to   
-distinguish between the three locations of Orchids     
+Graph of bivariate scatter plots to distinguish between the three locations of Orchids     
   
    
      
@@ -38,28 +38,26 @@ ggplot(orchid, aes( x = X1, y = X2)) +
 ```
    
    
-Boxplots of the data to choose two characteristcs  
-that should be used as predictors for orchids' locations. 
+Boxplots of the data to choose two characteristcs that should be used as predictors for orchids' locations. 
 
 ```{r, include=TRUE, echo=FALSE}
 boxplot(X1 ~ loc, 
         xlab = "Location", 
         ylab = "Petal length",
-        col = c("#f54242", "#d4f542", "#42f56f"))
+        col = c("#F8766D", "#7CAE00", "#00BFC4"))
 
 boxplot(X2 ~ loc, 
         xlab = "Location", 
         ylab = "Leaf width",
-        col = c("#f54242", "#d4f542", "#42f56f"))
+        col = c("#F8766D", "#7CAE00", "#00BFC4"))
 
 boxplot(X3 ~ loc, 
         xlab = "Location", 
         ylab = "Petal width",
-        col = c("#f54242", "#d4f542", "#42f56f"))
+        col = c("#F8766D", "#7CAE00", "#00BFC4"))
 ```
 
-From the graph it can be seen that there is a considerable difference 
-between the mean location of the Petal length (X1) and Leaf width (X2).
+From the graph it can be seen that there is a considerable difference between the mean values of the Petal length (X1) and Leaf width (X2).
 
 ```{r, include=TRUE, echo=FALSE}
 aggregate(X1 ~ loc, FUN = mean)
@@ -73,10 +71,11 @@ aggregate(X3 ~ loc, FUN = mean)
 ```
    
    
-So the Petal length and Leaf width data are used as predictors for the
-orchids' locations.
+So the Petal length and Leaf width data will be used as predictors for the orchids' locations.
 
-### Machine learning task B  
+---
+
+__*Part (b) Training data*__
 
 Creating a training set 210 randomly chosen
 data points and a test set of 60 data points.
@@ -87,12 +86,14 @@ model.train <- orchid[data.subset,]
 model.test <- orchid[-data.subset,]
 ```
 
-### Machine learning task C KNN Method   
+---
+
+__*Part (c) KNN Method*__
 
 
-```{r, include=FALSE, echo=FALSE}
+```{r, include=TRUE, echo=TRUE}
+# Create knn model
 set.seed(1)
-
 model.knn <- train(loc~.-X3, 
                    data = model.train, 
                    method = "knn", 
@@ -104,14 +105,15 @@ model.knn <- train(loc~.-X3,
 Graph showing the accuracy of K   
    
 ```{r, include=TRUE, echo=FALSE}
-plot(model.knn)
+plot(model.knn, main="Leave-One-Out Cross-Validation against size of K",xlab="K",ylab="Accuracy")
 ```
 
 The best optimal k value is `r model.knn$bestTune`  
 
 
-```{r, include=TRUE, echo=FALSE}
-predict.knn <- model.knn %>% predict(model.test)# Predicting the test model
+```{r, include=TRUE, echo=TRUE}
+# Predicting the test model
+predict.knn <- model.knn %>% predict(model.test)
 ```
 
 ```{r, include=TRUE, echo=FALSE}
@@ -135,29 +137,44 @@ probs <- matrix(knnPredGrid,
                 length(pl), 
                 length(pw))
 
+colour_map <- function(x){
+  if(x==1){return("#F8766D")}
+  else if(x==2){return("#7CAE00")}
+  else{return("#00BFC4")}
+}
+
+plot_colors<- apply(probs,1:2,colour_map)
+  
 contour(pl, pw, probs, labels="", 
         xlab="Petal length (mm)", ylab="leaf width (mm)", 
-        main="K-Nearest Neighbor", axes=T)
+        main="KNN predictions of Orchid location", axes=T)
 
 gd <- expand.grid(x=pl, y=pw)
 
-points(gd, pch=3, col=probs, cex= 0.1)
+points(gd, pch=3, col=plot_colors, cex= 0.1)
 
 # add the test points to the graph
-points(model.test$X1, model.test$X2, col= model.test$loc, cex= 2, pch = 20) 
+
+plot_points <- sapply(model.test$loc,colour_map)
+
+points(model.test$X1, model.test$X2, col= plot_points, cex= 2, pch = 20) 
 ```
 
-### Machine learning task D Random Forest Bagging method
+---
 
-```{r, include=FALSE, echo=FALSE}
+__*Part (d) Random Forest Bagging method*__
+
+```{r, include=TRUE, echo=FALSE}
+# Create Random Forest Bagging Model
 set.seed(1)
 bag.tree <- randomForest(loc ~ . -X3, data = orchid, subset = data.subset,
                          mtry = 2, importance = TRUE)
 round(importance(bag.tree), 2)
 ```
 
-```{r, include=FALSE, echo=FALSE}
-bag_predict <- predict(bag.tree, model.test, type = "class")# Predicting the test data
+```{r, include=TRUE, echo=FALSE}
+# Predicting the test data
+bag_predict <- predict(bag.tree, model.test, type = "class")
 ```
 
 ```{r, include=TRUE, echo=FALSE}
@@ -176,24 +193,27 @@ model.test$loc <- predict.bag
 probs <- matrix(bagPredGrid, length(pl), length(pw))
 
 contour(pl, pw, probs, labels="", 
-        xlab="Petal length (mm)", ylab="leaf width (mm)", 
-        main="Random forest Bagging method", axes=T)
+        xlab="Petal length (mm)", ylab="Leaf width (mm)", 
+        main="Random Forest Bagging method", axes=T)
 
 gd <- expand.grid(x=pl, y=pw)
 
-points(gd, pch=3, col=probs, cex=0.1)
+plot_colors<- apply(probs,1:2,colour_map)
+points(gd, pch=3, col=plot_colors, cex=0.1)
 
 # add the test points to the graph
-
-points(model.test$X1, model.test$X2, col= model.test$loc, cex= 2, pch = 20)
+plot_points <- sapply(model.test$loc,colour_map)
+points(model.test$X1, model.test$X2, col= plot_points, cex= 2, pch = 20)
 ```
 
-### Machine learning task E Support Vector Machines  
+---
+
+__*Part (e) Support Vector Machines*__
+
 Linear kernel
 
-```{r, include=FALSE, echo=FALSE}
+```{r, include=TRUE, echo=TRUE}
 set.seed(1)
-
 tune.out = tune(svm, loc ~ X1 + X2, data = orchid[data.subset,],
                 kernel ="linear",
                 ranges = list(cost = seq(from = 0.01,to = 2, length = 40) ))
@@ -202,8 +222,8 @@ tune.out = tune(svm, loc ~ X1 + X2, data = orchid[data.subset,],
 Choosing the best cost parameter  
   
     
-```{r, include=TRUE, echo=FALSE}
-plot(tune.out$performances$cost, tune.out$performances$error)
+```{r, include=TRUE, echo=TRUE}
+plot(tune.out$performances$cost, tune.out$performances$error, main = "NEEDS A TITLE",xlab = "NEEDS LABEL",ylab = "NEEDS LABEL")
 ```
 
 The best cost parameter for the linear kernel is `r tune.out$best.model$cost`
@@ -213,15 +233,18 @@ bestmod = tune.out$best.model
 plot(bestmod, data = model.test, X2~X1)
 ```
 
-```{r, include=TRUE, echo=FALSE}
-ypred_linear = predict(bestmod, model.test) # Predicting test result linear
+```{r, include=TRUE, echo=TRUE}
+# Predicting test result linear
+ypred_linear = predict(bestmod, model.test)
 ```
 
-### Machine learning task E Support Vector Machines Polynomial Kernel
 
-```{r, include=FALSE, echo=FALSE}
+Polynomial Kernel
+
+
+```{r, include=TRUE, echo=TRUE}
+# Create Polynomial Kernel
 set.seed(1)
-
 tune.out_poly = tune(svm, loc ~ X1 + X2, data = orchid[data.subset,],
                      kernel ="polynomial",
                      ranges = list(cost = seq(from = 0.01,to = 3, length = 30)))
@@ -231,8 +254,8 @@ tune.out_poly = tune(svm, loc ~ X1 + X2, data = orchid[data.subset,],
 Choosing the best cost parameter   
    
    
-```{r, include=TRUE, echo=FALSE}
-plot(tune.out_poly$performances$cost, tune.out_poly$performances$error)
+```{r, include=TRUE, echo=TRUE}
+plot(tune.out_poly$performances$cost, tune.out_poly$performances$error, main = "NEEDS A TITLE",xlab = "NEEDS LABEL",ylab = "NEEDS LABEL")
 ```
 
 The best cost parameter for the Polynomial kernel is `r tune.out_poly$best.model$cost`  
@@ -242,9 +265,16 @@ bestmod_poly = tune.out_poly$best.model
 plot(bestmod_poly, data = model.test, X2~X1)
 ```
 
-```{r, include=FALSE, echo=FALSE}
-ypred = predict(bestmod_poly, model.test)# Predicting test result Polynomial
+```{r, include=TRUE, echo=FALSE}
+# Predicting test result Polynomial
+ypred = predict(bestmod_poly, model.test)
 ```
+
+???? Which kernel is better ????
+
+---
+
+__*Part (f) Comparison*__
 
 **Test Accuracy for KNN Method**    
 
@@ -282,5 +312,7 @@ tab.poly
 1-(sum(tab.poly) - sum(diag(tab.poly))) / sum(tab.poly)
 ```
 
-From the results gotten it can be seen that the model with the best accuracy is the Random Forest Bagging method.    
+From our results it can be seen that the model with the best accuracy is the Random Forest Bagging method.    
 This method came out as the best because the Bagging method helps in increasing the accuracy of the Random Forest method and also helps reduce variance of the model to help in predicting accurate results.
+
+---
