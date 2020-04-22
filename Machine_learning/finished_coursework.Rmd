@@ -1,5 +1,5 @@
 ---
-title: "**Report_OLUMBENGA_10657769**"
+title: "**Report_OLUGBENGA_10651875**"
 author: "By: Aderibigbe Olugbenga & Paul Hazell"
 date: "18/04/2020"
 output:
@@ -270,8 +270,8 @@ plot(bestmod_poly, data = model.test, X2~X1)
 ypred = predict(bestmod_poly, model.test)
 ```
 
-???? Which kernel is better ????
-
+Which kernel is better?
+Computing the accuracy from the confusion matrix. It can be seen that the accuracy from the Linear Kernel is higher than that of the Polynomial Kernel. It would be best to choose the kernel with the higher accuracy which is the Linear Kernel
 ---
 
 __*Part (f) Comparison*__
