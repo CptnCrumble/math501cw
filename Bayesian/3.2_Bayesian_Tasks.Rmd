@@ -1,11 +1,12 @@
 ---
-title: "3.2_Bayesian_Tasks"
-author: "Paul Hazell"
-date: "25/03/2020"
 output:
   pdf_document: default
   html_document: default
 ---
+
+\pagenumbering{gobble}
+
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -27,7 +28,9 @@ colnames(df_long) <- c("Fertilizer","Yield","plot_size")
 __*Part (a) Visualise the data*__
 
   In the plot below crop yields are grouped by the fertilizer used upon the field and repeated yield values are shown as stacked circles. The mean yield for each fertilizer group is marked by a blue diamond. 
-```{r yield_plot}
+  
+  
+```{r yield_plot, echo=FALSE}
 ggplot(data=df_long, aes(x=Fertilizer, y=Yield))+
   geom_point(data=df_long,pch=21,alpha=0.75,aes(bg=Fertilizer, size=plot_size))+
   scale_size_continuous(range = c(10,8))+
@@ -46,6 +49,7 @@ ggplot(data=df_long, aes(x=Fertilizer, y=Yield))+
   scale_y_continuous(breaks=seq(0, 9, 1))+
   coord_flip()
 ```
+ 
   Our visualisation shows a trend of rising means across the fertilizer groups supporting the idea that a fields crop yield is influenced by the fertilizer used. However our data set is small, variance is considerable and we can see large overlaps in the ranges of yields for each of the groups. 
 
 ---
@@ -223,7 +227,7 @@ ggs_caterpillar(ggs_data,family = "^alpha")+
 
   Above we see a caterpillar plot for the 95% and 90% credible intervals of the distributions shown in section (g). Here we can see that the 95% credible intervals for $\alpha_4$ and $\alpha_3$ only contain values > 0 thereby allowing us to reject $H_{0(b)}$, pressuming that crop yield is a continuous parameter.
   
-  Whilst intuitively we would expect crop yield to be continous this fact is not given nor supported by the data. If we take crop yield to be discrete then we can no longer use $\alpha_3$ to reject $H_{0(b)}$ as a significant proportion of its credible interval is < 1, however we are still able to reject $H_{0(b)}$ on the basis that the credible interval of $\alpha_4$ is completely > 1.
+  Whilst intuitively we would expect crop yield to be continuous this fact is not given nor supported by the data. If we take crop yield to be discrete then we can no longer use $\alpha_3$ to reject $H_{0(b)}$ as a significant proportion of its credible interval is < 1, however we are still able to reject $H_{0(b)}$ on the basis that the credible interval of $\alpha_4$ is completely > 1.
   
   For a wider view of the data we present a caterpillar plot of credible intervals for mean yields.
   
@@ -245,7 +249,7 @@ __*Part (i) Compare Frequentist and Bayesian 95% confidence intervals*__
 
   Both ANOVA analysis methods have allowed us to reject $H_{0(b)}$ and the implied mean yield values from section (c) ($\mu_f = \mu_1 + \alpha_f$) agree with the mean yields computed in section (f). 
   
-  We can also see a strong alignment between the confidence intervals of the frequentist approach and the credible intervals of the Bayesian approach in the following table:
+  We can also see little difference between the confidence intervals of the frequentist approach and the credible intervals of the Bayesian approach in the following table:
   
 ```{r con-con, echo=FALSE}
 cred_i <- Bayesian_anova_inference[[2]]$summary[c(2,3,4),c(3,7)]
