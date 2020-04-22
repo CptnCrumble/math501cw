@@ -223,7 +223,7 @@ Choosing the best cost parameter
   
     
 ```{r, include=TRUE, echo=TRUE}
-plot(tune.out$performances$cost, tune.out$performances$error, main = "NEEDS A TITLE",xlab = "NEEDS LABEL",ylab = "NEEDS LABEL")
+plot(tune.out$performances$cost, tune.out$performances$error, main = "Perfomance error against cost for Linear Kernel",xlab = "Performance Cost",ylab = "Performance Error")
 ```
 
 The best cost parameter for the linear kernel is `r tune.out$best.model$cost`
@@ -255,7 +255,7 @@ Choosing the best cost parameter
    
    
 ```{r, include=TRUE, echo=TRUE}
-plot(tune.out_poly$performances$cost, tune.out_poly$performances$error, main = "NEEDS A TITLE",xlab = "NEEDS LABEL",ylab = "NEEDS LABEL")
+plot(tune.out_poly$performances$cost, tune.out_poly$performances$error, main = "Perfomance error against cost for Polynomial Kernel",xlab = "Performance Cost",ylab = "Performance Error")
 ```
 
 The best cost parameter for the Polynomial kernel is `r tune.out_poly$best.model$cost`  
