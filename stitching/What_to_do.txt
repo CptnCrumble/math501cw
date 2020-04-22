@@ -1,0 +1,9 @@
+1. Update this Rmd file, dont edit the settings at top
+
+2. Knit to pdf
+
+3. Head  to https://smallpdf.com/merge-pdf
+
+4. Merge the 2  pdfs  together
+
+5. Upload  the finished pdf to the repo, with the correct name in the final folder
